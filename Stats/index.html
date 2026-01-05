@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stats</title>
+</head>
+
+<body>
+    <section class="stats-marquee" aria-label="Stats">
+        <div class="stats-marquee__tilt">
+            <div class="stats-marquee__viewport">
+                <div class="stats-marquee__track" id="statsTrack">
+                    <!-- Set your images via inline style or data-bg -->
+                    <article class="stat-card" style="--bg:url('https://picsum.photos/id/1011/900/600');">
+                        <div class="stat-card__overlay"></div>
+                        <div class="stat-card__content">
+                            <p class="stat-card__kicker">Performance</p>
+                            <h3 class="stat-card__value">98%</h3>
+                            <p class="stat-card__label">Client satisfaction</p>
+                        </div>
+                    </article>
+
+                    <article class="stat-card" style="--bg:url('https://picsum.photos/id/1015/900/600');">
+                        <div class="stat-card__overlay"></div>
+                        <div class="stat-card__content">
+                            <p class="stat-card__kicker">Growth</p>
+                            <h3 class="stat-card__value">+142%</h3>
+                            <p class="stat-card__label">Organic traffic</p>
+                        </div>
+                    </article>
+
+                    <article class="stat-card" style="--bg:url('https://picsum.photos/id/1005/900/600');">
+                        <div class="stat-card__overlay"></div>
+                        <div class="stat-card__content">
+                            <p class="stat-card__kicker">Delivery</p>
+                            <h3 class="stat-card__value">7 days</h3>
+                            <p class="stat-card__label">Avg. turnaround</p>
+                        </div>
+                    </article>
+
+                    <article class="stat-card" style="--bg:url('https://picsum.photos/id/1025/900/600');">
+                        <div class="stat-card__overlay"></div>
+                        <div class="stat-card__content">
+                            <p class="stat-card__kicker">Impact</p>
+                            <h3 class="stat-card__value">1.2M</h3>
+                            <p class="stat-card__label">Impressions served</p>
+                        </div>
+                    </article>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- GSAP -->
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+
+    <style>
+        .stats-marquee {
+            padding: 72px 0;
+            overflow: hidden;
+            width: 100%;
+            max-width: 1440px;
+            margin-inline: auto;
+        }
+
+        /* Tilt wrapper */
+        .stats-marquee__tilt {
+            transform: rotate(-2deg);
+            transform-origin: center;
+        }
+
+        /* Viewport hides overflow so marquee feels clean */
+        .stats-marquee__viewport {
+            overflow: hidden;
+            width: 100%;
+        }
+
+        /* Track that will move */
+        .stats-marquee__track {
+            display: flex;
+            gap: 22px;
+            width: max-content;
+            padding: 8px 6vw;
+            margin-inline: auto;
+            will-change: transform;
+        }
+
+        /* Pause cursor hint */
+        .stats-marquee__viewport:hover {
+            cursor: pointer;
+        }
+
+        .stat-card {
+            width: 384px;
+            height: 370px;
+            position: relative;
+            border-radius: 18px;
+            overflow: hidden;
+            flex: 0 0 auto;
+            background-image: var(--bg);
+            background-size: cover;
+            background-position: center;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, .18);
+            transform: translateZ(0);
+        }
+
+        /* Gradient overlay */
+        .stat-card__overlay {
+            position: absolute;
+            inset: 0;
+            background:
+                linear-gradient(180deg, rgba(0, 0, 0, .0) 0%, rgba(0, 0, 0, .65) 65%, rgba(0, 0, 0, .78) 100%),
+                radial-gradient(90% 60% at 20% 10%, rgba(255, 255, 255, .18) 0%, rgba(255, 255, 255, 0) 55%);
+            pointer-events: none;
+        }
+
+        .stat-card__content {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding: 26px;
+            color: #fff;
+            z-index: 1;
+        }
+
+        .stat-card__kicker {
+            margin: 0 0 8px;
+            font: 600 13px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Arial;
+            letter-spacing: .14em;
+            text-transform: uppercase;
+            opacity: .92;
+        }
+
+        .stat-card__value {
+            margin: 0 0 10px;
+            font: 800 54px/1 system-ui, -apple-system, Segoe UI, Roboto, Arial;
+            letter-spacing: -0.02em;
+        }
+
+        .stat-card__label {
+            margin: 0;
+            font: 500 16px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Arial;
+            opacity: .9;
+        }
+
+        /* Optional: subtle hover lift (separate from marquee pause) */
+        .stat-card:hover {
+            transform: translateY(-4px);
+            transition: transform .25s ease;
+        }
+
+        @media (max-width: 900px) {
+            .stat-card {
+                width: 320px;
+                height: 320px;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .stats-marquee__tilt {
+                transform: none;
+            }
+        }
+    </style>
+
+    <script>
+        (function () {
+            const track = document.getElementById("statsTrack");
+            const viewport = track.closest(".stats-marquee__viewport");
+
+            // Respect reduced motion
+            const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+            if (reduceMotion) return;
+
+            // Duplicate content so the loop can feel seamless
+            // (This keeps exactly 4 "real" cards but repeats them for continuous scroll)
+            const original = track.innerHTML;
+            track.insertAdjacentHTML("beforeend", original);
+
+            // After duplication, compute how far to travel (width of first set)
+            const cards = Array.from(track.children);
+            const half = Math.floor(cards.length / 2);
+
+            // Width of first half including gaps
+            let distance = 0;
+            for (let i = 0; i < half; i++) {
+                const el = cards[i];
+                const styles = window.getComputedStyle(track);
+                const gap = parseFloat(styles.columnGap || styles.gap || "0");
+                distance += el.getBoundingClientRect().width + (i === half - 1 ? 0 : gap);
+            }
+
+            // 👉 START FROM CENTER
+            gsap.set(track, { x: -distance / 2 });
+
+            // Slow subtle marquee
+            const tween = gsap.to(track, {
+                // x: -distance,
+                x: `-=${distance}`,
+                duration: 22,        // lower = faster
+                ease: "none",
+                repeat: -1,
+                // modifiers: {
+                //     x: gsap.utils.unitize(x => parseFloat(x) % -distance) // wrap
+                // }
+                modifiers: {
+                    x: (x) => {
+                        const v = parseFloat(x);
+                        // keep x in the range [-distance, 0)
+                        return (v % -distance) + "px";
+                    }
+                }
+            });
+
+            // Pause marquee on hover (so people can read)
+            viewport.addEventListener("mouseenter", () => tween.pause());
+            viewport.addEventListener("mouseleave", () => tween.resume());
+
+            // Also pause if user focuses inside (accessibility)
+            viewport.addEventListener("focusin", () => tween.pause());
+            viewport.addEventListener("focusout", () => tween.resume());
+        })();
+    </script>
+
+</body>
+
+</html>

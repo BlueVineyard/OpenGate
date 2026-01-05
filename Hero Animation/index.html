@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hero Animation</title>
+
+    <style>
+        .hero {
+            height: 100vh;
+            background: #fff;
+            z-index: 1;
+            position: relative;
+        }
+
+        .word {
+            position: relative;
+            z-index: 6;
+        }
+
+        .pin {
+            position: relative;
+            min-height: 100vh;
+            overflow: hidden;
+            perspective: 1200px;
+            /* key for z-axis */
+            transform-style: preserve-3d;
+            perspective-origin: 50% 50%;
+        }
+
+        .logo {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            font: 800 64px/1 system-ui;
+            letter-spacing: 1px;
+            z-index: 5;
+            transform: translateZ(0);
+        }
+
+        .gate-inline {
+            position: relative;
+            width: 70px;
+            height: 50px;
+            display: inline-block;
+            z-index: 6;
+        }
+
+        /* 3D gate container */
+        .gate3d {
+            position: absolute;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            transform-style: preserve-3d;
+            z-index: 4;
+        }
+
+        /* doors sized to start as a logo-ish gate, then we scale container */
+        .doorWrap {
+            position: absolute;
+            top: -8px;
+            width: 50px;
+            height: 66px;
+            transform-style: preserve-3d;
+            backface-visibility: hidden;
+        }
+
+        /* hinge at the seam */
+        .doorWrap--left {
+            left: 50%;
+            transform-origin: 100% 50%;
+        }
+
+        .doorWrap--right {
+            left: 50%;
+            transform-origin: 0% 50%;
+        }
+
+        /* the panel itself is purely the shape, no hinge math */
+        .door {
+            position: absolute;
+            inset: 0;
+            background: #000;
+            transform: translateZ(0);
+            /* keep panel stable */
+        }
+
+        /* keep your clip-path shapes here */
+        .door--left {
+            background: linear-gradient(90deg, #000, #111);
+            clip-path: polygon(0% 0%, 100% 24%, 100% 76%, 0% 100%);
+        }
+
+        .door--right {
+            background: linear-gradient(90deg, #111, #000);
+            clip-path: polygon(0% 24%, 100% 0%, 100% 100%, 0% 76%);
+        }
+
+        /* reveal layer (starts hidden) */
+        /* .reveal {
+            position: absolute;
+            inset: 0;
+            z-index: 3;
+            opacity: 0;
+            pointer-events: none;
+            color: #fff;
+        } */
+
+        .reveal {
+            position: relative;
+            min-height: 100vh;
+            width: 100%;
+            opacity: 0;
+            pointer-events: none;
+            color: #fff;
+            z-index: 2;
+        }
+
+        .reveal.is-active {
+            pointer-events: auto;
+            z-index: 9999;
+        }
+
+        /* Dark background behind everything (like your screenshot) */
+        .reveal::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: #181817;
+            opacity: 1;
+        }
+
+        /* HUD = title + bottom meta row (moves up later) */
+        .reveal__hud {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 3;
+            text-align: center;
+            pointer-events: none;
+            /* so clicks go to video button */
+        }
+
+        .reveal__video {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+        }
+
+        .reveal__video video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .reveal__title {
+            font: 900 clamp(56px, 10vw, 160px)/0.9 system-ui;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #fff;
+        }
+
+        /* bottom bar */
+        .reveal__meta {
+            margin-top: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 22px;
+            opacity: 0.75;
+            font: 500 22px/1.2 system-ui;
+        }
+
+        .meta-line {
+            width: min(240px, 18vw);
+            height: 2px;
+            background: rgba(255, 255, 255, 0.18);
+        }
+
+        .meta-cta {
+            pointer-events: auto;
+            padding: 12px 18px;
+            border-radius: 14px;
+            border: 0;
+            color: #fff;
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(8px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+            cursor: pointer;
+        }
+
+        /* VIDEO STAGE */
+        .reveal__stage {
+            position: absolute;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            z-index: 2;
+        }
+
+        .custom-player {
+            width: min(780px, 70vw);
+            aspect-ratio: 16/9;
+            border-radius: 18px;
+            overflow: hidden;
+            position: relative;
+            box-shadow:
+                18px -14px 0 6px #20A58A;
+        }
+
+        .custom-player video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        /* play button */
+        .video-play-btn {
+            position: absolute;
+            inset: 0;
+            margin: auto;
+            width: 88px;
+            height: 88px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(0, 0, 0, 0.65);
+            color: #fff;
+            font-size: 32px;
+            cursor: pointer;
+
+            display: grid;
+            place-items: center;
+
+            box-shadow:
+                0 0 0 1px rgba(255, 255, 255, 0.15),
+                0 0 30px rgba(0, 0, 0, 0.6),
+                0 0 80px rgba(255, 255, 255, 0.15);
+
+            transition: transform 0.25s ease, opacity 0.25s ease;
+        }
+
+        .video-play-btn:hover {
+            transform: scale(1.08);
+        }
+
+        .custom-player.is-playing .video-play-btn {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+
+        .before-hero {
+            min-height: 20vh;
+            background: #ff0000;
+            position: relative;
+            z-index: 0;
+        }
+
+        .after-hero {
+            min-height: 100vh;
+            background: #ff0000;
+            position: relative;
+            z-index: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <section class="before-hero">
+        <!-- next content -->
+    </section>
+
+    <section class="hero" id="hero">
+        <div class="pin">
+
+            <div class="logo" aria-label="Open Gate">
+                <span class="word">OPEN</span>
+
+                <span class="gate-inline">
+                    <span class="gate3d">
+                        <span class="doorWrap doorWrap--left">
+                            <span class="door door--left"></span>
+                        </span>
+
+                        <span class="doorWrap doorWrap--right">
+                            <span class="door door--right"></span>
+                        </span>
+
+                    </span>
+                </span>
+
+                <span class="word">GATE</span>
+            </div>
+
+
+        </div>
+    </section>
+    <section class="reveal" id="reveal">
+        <!-- TOP GROUP (this is what will move up later) -->
+        <div class="reveal__hud">
+            <div class="reveal__title">OPEN GATE</div>
+
+            <div class="reveal__meta">
+                <div class="meta-left">Creative</div>
+                <div class="meta-line"></div>
+
+                <button class="meta-cta" type="button">
+                    REQUEST A QUOTE <span aria-hidden="true">➜</span>
+                </button>
+
+                <div class="meta-line"></div>
+                <div class="meta-right">Films</div>
+            </div>
+        </div>
+
+        <!-- VIDEO CARD (sits behind title, then moves down later) -->
+        <div class="reveal__stage">
+            <div class="reveal__video custom-player">
+                <video id="heroVideo" src="your-video.mp4" playsinline preload="metadata"></video>
+                <button class="video-play-btn" aria-label="Play video">▶</button>
+            </div>
+        </div>
+    </section>
+
+    <section class="after-hero">
+        <!-- next content -->
+    </section>
+
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.1/dist/gsap.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.1/dist/ScrollTrigger.min.js"></script>
+
+    <script>
+        gsap.registerPlugin(ScrollTrigger);
+
+        // initial states
+        gsap.set("#reveal", { autoAlpha: 0 });
+        gsap.set(".custom-player", { scale: 0.95, transformOrigin: "50% 50%" });
+        gsap.set(".doorWrap--left", { z: 40, rotationY: -35, x: -52 });
+        gsap.set(".doorWrap--right", { z: 40, rotationY: 35, x: 2 });
+
+        // -----------------------------
+        // 1) HERO TIMELINE (pins hero)
+        // -----------------------------
+        const heroTL = gsap.timeline({
+            scrollTrigger: {
+                trigger: "#hero",
+                start: "top top",
+                end: "+=2200",
+                scrub: true,
+                pin: ".pin",
+                anticipatePin: 1,
+                markers: false,
+            }
+        });
+
+        heroTL.to(".gate-inline", {
+            scale: 85,
+            duration: 1.2,
+            ease: "power2.inOut",
+            transformOrigin: "50% 50%"
+        }, 0);
+
+        heroTL.to(".word", { autoAlpha: 0, duration: 0.3 }, 0.2);
+
+        heroTL.to([".doorWrap--left", ".doorWrap--right"], { z: 160, duration: 0.3 }, 0.9);
+        heroTL.to(".doorWrap--left", { x: -80, duration: 1.1, ease: "power3.inOut" }, 1.1);
+        heroTL.to(".doorWrap--right", { x: 30, duration: 1.1, ease: "power3.inOut" }, 1.1);
+
+        // reveal fades in (NO fixed)
+        heroTL.to("#reveal", {
+            autoAlpha: 1,
+            duration: 0.4,
+            ease: "power1.out",
+            onStart: () => document.querySelector("#reveal").classList.add("is-active"),
+            onReverseComplete: () => document.querySelector("#reveal").classList.remove("is-active")
+        }, 1.6);
+
+        heroTL.to(".gate3d", { autoAlpha: 0, duration: 0.2 }, 1.85);
+
+        // -----------------------------------
+        // 2) REVEAL TIMELINE (pins #reveal)
+        // -----------------------------------
+        const revealTL = gsap.timeline({
+            scrollTrigger: {
+                trigger: "#reveal",
+                start: "top top",
+                end: "+=1400",
+                scrub: true,
+                pin: true,              // <--- this is OPTION 5
+                anticipatePin: 1,
+                markers: false,
+            }
+        });
+
+        // Dock HUD to top
+        revealTL.to(".reveal__hud", {
+            yPercent: -50,
+            top: "110px",
+            duration: 0.9,
+            ease: "power2.inOut"
+        }, 0);
+
+        // Expand video
+        revealTL.fromTo(".custom-player",
+            { scale: 0.95, width: "min(780px, 70vw)", boxShadow: "9px -7px 0 6px #20A58A" },
+            { scale: 1, width: "min(1200px, 86vw)", duration: 0.9, ease: "power2.inOut", boxShadow: "unset" },
+            0
+        );
+
+        // Push stage down
+        revealTL.to(".reveal__stage", {
+            y: 120,
+            duration: 0.9,
+            ease: "power2.inOut"
+        }, 0);
+    </script>
+
+
+    <!-- <script>
+        gsap.registerPlugin(ScrollTrigger);
+
+        const tl = gsap.timeline({
+            scrollTrigger: {
+                trigger: "#hero",
+                start: "top top",
+                end: "+=3000",     // adjust for how long the sequence lasts
+                scrub: true,
+                // pin: true,
+                pin: ".pin",
+                anticipatePin: 1,
+                markers: false,
+            }
+        });
+
+        // initial states
+        gsap.set(".reveal", { autoAlpha: 0 });
+        gsap.set(".custom-player", { scale: 0.95, transformOrigin: "50% 50%" });
+        gsap.set(".doorWrap--left", { z: 40, rotationY: -35, x: -52 });
+        gsap.set(".doorWrap--right", { z: 40, rotationY: 35, x: 2 });
+
+
+        // Gate zooms in and fills screen (scale the whole gate3d)
+        tl.to(".gate-inline", {
+            scale: 85,                 // tweak until it fills screen
+            duration: 1.2,
+            ease: "power2.inOut",
+            transformOrigin: "50% 50%"
+        }, 0);
+
+        tl.to(".word", { autoAlpha: 0, duration: 0.3 }, 0.2);
+
+        // Gate opens through camera plane: +Z -> -Z + rotate wider
+        tl.to([".doorWrap--left", ".doorWrap--right"], { z: 160, duration: 0.3 }, 0.9);
+
+
+        tl.to(".doorWrap--left", { x: -80, duration: 1.1, ease: "power3.inOut" }, 1.1);
+        tl.to(".doorWrap--right", { x: 30, duration: 1.1, ease: "power3.inOut" }, 1.1);
+
+
+        // Reveal the next section (text + video behind)
+        tl.to(".reveal", {
+            autoAlpha: 1,
+            duration: 0.4,
+            ease: "power1.out",
+            onStart: () => {
+                document.querySelector(".reveal").classList.add("is-active", "is-fixed");
+            },
+            onReverseComplete: () => document.querySelector(".reveal").classList.remove("is-active", "is-fixed")
+        }, 1.6);
+
+        // Dock the HUD to top
+        tl.to(".reveal__hud", {
+            yPercent: -50,        // undo translateY(-50%) effect via animation feel
+            top: "110px",         // where it should rest
+            duration: 0.9,
+            ease: "power2.inOut"
+        }, 2.2);
+
+        // Push video down and make it a bit larger (or full width later)
+        tl.fromTo(".custom-player",
+            { scale: 0.95, width: "min(780px, 70vw)", boxShadow: "9px -7px 0 6px #20A58A" },
+            { scale: 1, width: "min(1200px, 86vw)", duration: 0.9, ease: "power2.inOut", boxShadow: "unset" },
+            2.2
+        );
+
+
+        // Move the stage down (so video sits below the docked HUD)
+        tl.to(".reveal__stage", {
+            y: 120,               // tweak spacing under the docked HUD
+            duration: 0.9,
+            ease: "power2.inOut"
+        }, 2.2);
+
+
+        // optional: fully remove gate visuals once reveal is active
+        tl.to(".gate3d", {
+            autoAlpha: 0,
+            duration: 0.2
+        }, 1.85);
+
+        tl.scrollTrigger.eventCallback("onLeave", () => {
+            document.querySelector(".reveal").classList.remove("is-fixed");
+        });
+
+        tl.scrollTrigger.eventCallback("onEnterBack", () => {
+            // when user scrolls back into the pinned hero, restore fixed overlay behavior
+            if (gsap.getProperty(".reveal", "autoAlpha") > 0) {
+                document.querySelector(".reveal").classList.add("is-fixed");
+            }
+        });
+
+        tl.scrollTrigger.eventCallback("onRefreshInit", () => {
+            document.querySelector(".reveal").classList.remove("is-fixed");
+        });
+
+
+
+    </script> -->
+
+    <script>
+        const video = document.getElementById("heroVideo");
+        const player = document.querySelector(".custom-player");
+        const playBtn = document.querySelector(".video-play-btn");
+
+        function toggleVideo() {
+            if (video.paused) {
+                video.play();
+                player.classList.add("is-playing");
+            } else {
+                video.pause();
+                player.classList.remove("is-playing");
+            }
+        }
+
+        playBtn.addEventListener("click", toggleVideo);
+        video.addEventListener("click", toggleVideo);
+
+        // reset UI if video ends
+        video.addEventListener("ended", () => {
+            player.classList.remove("is-playing");
+        });
+    </script>
+
+
+</body>
+
+</html>

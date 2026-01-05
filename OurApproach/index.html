@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Our Approach</title>
+
+    <style>
+        :root {
+            --bg: #111;
+            --fg: #fff;
+            --muted: rgba(255, 255, 255, .35);
+            --cardRadius: 22px;
+            --gold: #c8b37a;
+        }
+
+        .approach {
+            background: radial-gradient(1200px 800px at 30% 10%, #1c1c1c 0%, #0f0f0f 60%, #0b0b0b 100%);
+            color: var(--fg);
+        }
+
+        .approach__inner {
+            height: 100vh;
+            /* full screen */
+            position: relative;
+            overflow: hidden;
+        }
+
+        .approach__top {
+            position: absolute;
+            top: 6vh;
+            left: 6vw;
+            z-index: 5;
+        }
+
+        .approach__title {
+            margin: 0;
+            font: 900 clamp(40px, 5vw, 76px)/0.95 system-ui, -apple-system, Segoe UI, Roboto, Arial;
+            letter-spacing: .02em;
+        }
+
+        .approach__bottom {
+            position: absolute;
+            inset: 0;
+            padding-top: 22vh;
+            /* space for title area */
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            align-items: stretch;
+            gap: 3vw;
+            padding-left: 6vw;
+            padding-right: 6vw;
+        }
+
+        .approach__track {
+            grid-column: 1 / -1;
+            position: relative;
+            will-change: transform;
+        }
+
+        .approach__step {
+            height: calc(100vh - 22vh);
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3vw;
+            align-items: center;
+            padding-bottom: 4vh;
+        }
+
+        .approach__left,
+        .approach__right {
+            min-width: 0;
+        }
+
+        .approach__card {
+            position: relative;
+            border-radius: var(--cardRadius);
+            overflow: hidden;
+            width: min(520px, 100%);
+            aspect-ratio: 16/9;
+            background: #222;
+            box-shadow: 0 24px 60px rgba(0, 0, 0, .45);
+            filter: saturate(0.9);
+            opacity: .55;
+            /* inactive look */
+            transform: translateZ(0);
+            transition: opacity .25s ease, transform .25s ease;
+        }
+
+        .approach__card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .approach__cardOverlay {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(800px 400px at 20% 30%, rgba(255, 255, 255, .12), transparent 60%),
+                linear-gradient(to top, rgba(0, 0, 0, .65), rgba(0, 0, 0, .15));
+        }
+
+        .approach__cardText {
+            position: absolute;
+            left: 18px;
+            bottom: 16px;
+            font: 900 clamp(26px, 3vw, 44px)/1 system-ui;
+            letter-spacing: .02em;
+        }
+
+        .approach__copy {
+            margin: 0;
+            font: 700 clamp(18px, 1.5vw, 22px)/1.4 system-ui;
+            max-width: 38ch;
+            color: var(--muted);
+            text-transform: uppercase;
+        }
+
+        /* Center indicator */
+        .approach__indicator {
+            position: absolute;
+            top: 22vh;
+            bottom: 6vh;
+            left: calc(50% - 45px);
+            /* column center of the 90px middle column */
+            width: 90px;
+            display: grid;
+            place-items: center;
+            pointer-events: none;
+        }
+
+        .approach__line {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: rgba(255, 255, 255, .18);
+            border-radius: 999px;
+        }
+
+        .approach__lineFill {
+            position: absolute;
+            top: 0;
+            width: 2px;
+            height: 0%;
+            background: var(--gold);
+            border-radius: 999px;
+            transform-origin: top;
+        }
+
+        .approach__dots {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 10px 0;
+        }
+
+        .approach__dots .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, .25);
+            margin: 0 auto;
+            transition: background .2s ease, transform .2s ease;
+        }
+
+        /* Active step styles (added via JS) */
+        .approach__step.is-active .approach__card {
+            opacity: 1;
+            transform: translateY(-4px);
+        }
+
+        .approach__step.is-active .approach__copy {
+            color: rgba(255, 255, 255, .92);
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .approach__bottom {
+                grid-template-columns: 1fr;
+                padding-top: 18vh;
+            }
+
+            .approach__step {
+                grid-template-columns: 1fr;
+            }
+
+            .approach__indicator {
+                display: none;
+                /* keep it simple on mobile, or redesign */
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <section style="height: 50vh;"></section>
+
+    <section class="approach" id="approach" aria-label="Our Approach">
+        <div class="approach__inner">
+            <!-- Top (always visible while pinned) -->
+            <header class="approach__top">
+                <h2 class="approach__title">OUR<br />APPROACH</h2>
+            </header>
+
+            <!-- Bottom (scroll-driven) -->
+            <div class="approach__bottom">
+                <!-- Steps Track (moves up) -->
+                <div class="approach__track" id="approachTrack">
+                    <!-- Step 1 -->
+                    <div class="approach__step" data-step>
+                        <div class="approach__left">
+                            <article class="approach__card">
+                                <img src="https://picsum.photos/id/1011/800/500" alt="" />
+                                <div class="approach__cardOverlay"></div>
+                                <div class="approach__cardText">DISCOVER</div>
+                            </article>
+                        </div>
+
+                        <div class="approach__right">
+                            <p class="approach__copy">
+                                WE DIVE DEEP INTO YOUR BRAND, AUDIENCE, AND VISION TO UNCOVER
+                                THE STORY WORTH TELLING.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Step 2 -->
+                    <div class="approach__step" data-step>
+                        <div class="approach__left">
+                            <article class="approach__card">
+                                <img src="https://picsum.photos/id/1015/800/500" alt="" />
+                                <div class="approach__cardOverlay"></div>
+                                <div class="approach__cardText">CREATE</div>
+                            </article>
+                        </div>
+
+                        <div class="approach__right">
+                            <p class="approach__copy">
+                                FROM SCRIPTING TO ON-SET PRODUCTION, WE SHAPE COMPELLING VISUALS
+                                THAT CONNECT EMOTIONALLY.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div class="approach__step" data-step>
+                        <div class="approach__left">
+                            <article class="approach__card">
+                                <img src="https://picsum.photos/id/1025/800/500" alt="" />
+                                <div class="approach__cardOverlay"></div>
+                                <div class="approach__cardText">REFINE</div>
+                            </article>
+                        </div>
+
+                        <div class="approach__right">
+                            <p class="approach__copy">
+                                WE EDIT, POLISH, AND ELEVATE—ENSURING EVERY FRAME ALIGNS WITH
+                                YOUR MESSAGE AND GOALS.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Step 4 -->
+                    <div class="approach__step" data-step>
+                        <div class="approach__left">
+                            <article class="approach__card">
+                                <img src="https://picsum.photos/id/1035/800/500" alt="" />
+                                <div class="approach__cardOverlay"></div>
+                                <div class="approach__cardText">DELIVER</div>
+                            </article>
+                        </div>
+
+                        <div class="approach__right">
+                            <p class="approach__copy">
+                                HIGH-QUALITY ASSETS DELIVERED WITH PRECISION, READY TO MAKE AN
+                                IMPACT ACROSS ANY PLATFORM.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Center Indicator -->
+                <div class="approach__indicator" aria-hidden="true">
+                    <div class="approach__line"></div>
+                    <div class="approach__lineFill" id="approachLineFill"></div>
+
+                    <!-- (Optional) dots aligned with each step -->
+                    <div class="approach__dots" id="approachDots">
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                        <span class="dot"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section style="height: 50vh;"></section>
+
+    <!-- GSAP -->
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+
+    <script>
+        gsap.registerPlugin(ScrollTrigger);
+
+        const section = document.querySelector("#approach");
+        const inner = section.querySelector(".approach__inner");
+        const track = document.querySelector("#approachTrack");
+        const steps = gsap.utils.toArray("[data-step]");
+        const lineFill = document.querySelector("#approachLineFill");
+        const dots = gsap.utils.toArray("#approachDots .dot");
+
+        // Total scroll distance = (steps-1) screens worth of movement
+        const stepCount = steps.length;
+        const moveY = () => (stepCount - 1) * (inner.clientHeight * 0.78);
+        // 0.78 is roughly (100vh - top padding). You can tweak for perfect alignment.
+
+        // Pin + scrub timeline
+        const tl = gsap.timeline({
+            scrollTrigger: {
+                trigger: section,
+                start: "top top",
+                end: () => "+=" + (stepCount * inner.clientHeight),
+                scrub: 1,
+                pin: true,
+                anticipatePin: 1,
+                // markers: true,
+                onUpdate: (self) => {
+                    // Fill line based on progress
+                    gsap.set(lineFill, { height: (self.progress * 100) + "%" });
+
+                    // Active step based on progress segments
+                    const index = Math.min(stepCount - 1, Math.floor(self.progress * stepCount));
+                    steps.forEach((el, i) => el.classList.toggle("is-active", i === index));
+
+                    // Optional dot activation
+                    dots.forEach((d, i) => {
+                        const active = i <= index;
+                        d.style.background = active ? "var(--gold)" : "rgba(255,255,255,.25)";
+                        d.style.transform = active ? "scale(1.15)" : "scale(1)";
+                    });
+                }
+            }
+        });
+
+        tl.to(track, {
+            y: () => -moveY(),
+            ease: "none"
+        });
+
+        // Ensure correct sizes on resize
+        window.addEventListener("resize", () => ScrollTrigger.refresh());
+    </script>
+
+</body>
+
+</html>

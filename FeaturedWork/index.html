@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Featured Work</title>
+
+    <style>
+        .featured-work {
+            padding: 48px 0;
+        }
+
+        .fw-grid {
+            display: grid;
+            gap: 20px;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        @media (max-width: 900px) {
+            .fw-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 640px) {
+            .fw-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .fw-card {
+            display: block;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .fw-media {
+            position: relative;
+            border-radius: 18px;
+            overflow: hidden;
+            aspect-ratio: 16 / 10;
+            /* adjust as needed */
+            background: #0b0b0b;
+            transform: translateZ(0);
+        }
+
+        .fw-video,
+        .fw-overlay-img {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .fw-overlay-img {
+            z-index: 2;
+            transition: opacity 220ms ease, transform 400ms ease;
+        }
+
+        .fw-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 3;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding: 18px;
+            background: linear-gradient(to top, rgba(0, 0, 0, .62), rgba(0, 0, 0, 0) 60%);
+            gap: 6px;
+        }
+
+        .fw-kicker {
+            margin: 0;
+            font-size: 12px;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            opacity: .85;
+        }
+
+        .fw-title {
+            margin: 0;
+            font-size: 18px;
+            line-height: 1.1;
+        }
+
+        .fw-meta {
+            margin: 0;
+            font-size: 13px;
+            opacity: .85;
+        }
+
+        /* Hover polish */
+        .fw-card:hover .fw-overlay-img {
+            opacity: 0;
+            transform: scale(1.02);
+        }
+
+        .fw-card:focus-visible {
+            outline: 3px solid rgba(0, 160, 255, 0.8);
+            outline-offset: 4px;
+            border-radius: 22px;
+        }
+    </style>
+</head>
+
+<body>
+    <section class="featured-work" aria-label="Featured work">
+        <div class="fw-grid">
+            <!-- Card 1 -->
+            <a class="fw-card" href="/work/project-1">
+                <div class="fw-media">
+                    <video class="fw-video" muted playsinline preload="metadata" poster="project-1-poster.jpg">
+                        <source src="project-1.mp4" type="video/mp4" />
+                    </video>
+
+                    <!-- Overlay image (optional if using poster only) -->
+                    <img class="fw-overlay-img" src="project-1-poster.jpg" alt="" aria-hidden="true" />
+
+                    <!-- Text overlay -->
+                    <div class="fw-overlay">
+                        <p class="fw-kicker">Brand / Web</p>
+                        <h3 class="fw-title">Project One</h3>
+                        <p class="fw-meta">2025 • Motion + UI</p>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Card 2 -->
+            <a class="fw-card" href="/work/project-2">
+                <div class="fw-media">
+                    <video class="fw-video" muted playsinline preload="metadata" poster="project-1-poster.jpg">
+                        <source src="project-1.mp4" type="video/mp4" />
+                    </video>
+                    <img class="fw-overlay-img" src="project-1-poster.jpg" alt="" aria-hidden="true" />
+                    <div class="fw-overlay">
+                        <p class="fw-kicker">SaaS / Product</p>
+                        <h3 class="fw-title">Project Two</h3>
+                        <p class="fw-meta">2025 • Animation</p>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Card 3 -->
+            <a class="fw-card" href="/work/project-3">
+                <div class="fw-media">
+                    <video class="fw-video" muted playsinline preload="metadata" poster="project-1-poster.jpg">
+                        <source src="project-1.mp4" type="video/mp4" />
+                    </video>
+                    <img class="fw-overlay-img" src="project-1-poster.jpg" alt="" aria-hidden="true" />
+                    <div class="fw-overlay">
+                        <p class="fw-kicker">Ecommerce</p>
+                        <h3 class="fw-title">Project Three</h3>
+                        <p class="fw-meta">2024 • Web + Video</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </section>
+
+    <script>
+        document.querySelectorAll(".fw-card").forEach((card) => {
+            const video = card.querySelector(".fw-video");
+            const overlayImg = card.querySelector(".fw-overlay-img");
+
+            if (!video) return;
+
+            // Ensure it can autoplay on hover (must be muted)
+            video.muted = true;
+
+            const playVideo = async () => {
+                try {
+                    // Some browsers require load() after changing sources; safe to keep
+                    // video.load();
+                    await video.play();
+                    if (overlayImg) overlayImg.style.opacity = "0";
+                } catch (e) {
+                    // Autoplay might be blocked; keep overlay visible
+                }
+            };
+
+            const stopVideo = () => {
+                video.pause();
+                video.currentTime = 0; // optional: reset on mouse leave
+                if (overlayImg) overlayImg.style.opacity = "";
+            };
+
+            // Desktop hover
+            card.addEventListener("mouseenter", playVideo);
+            card.addEventListener("mouseleave", stopVideo);
+
+            // Keyboard accessibility
+            card.addEventListener("focusin", playVideo);
+            card.addEventListener("focusout", stopVideo);
+
+            // Touch devices: play on first tap, navigate on second tap
+            // (Optional) If you want this behavior, uncomment:
+            /*
+            let tappedOnce = false;
+            card.addEventListener("touchstart", (e) => {
+              if (!tappedOnce) {
+                tappedOnce = true;
+                e.preventDefault();
+                playVideo();
+                setTimeout(() => (tappedOnce = false), 1200);
+              }
+            }, { passive: false });
+            */
+        });
+    </script>
+
+</body>
+
+</html>
