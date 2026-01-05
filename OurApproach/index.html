@@ -29,9 +29,16 @@
 
         .approach__top {
             position: absolute;
-            top: 6vh;
-            left: 6vw;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 22vh;
+            padding: 6vh 6vw 0;
             z-index: 5;
+
+            /* subtle separation */
+            background: linear-gradient(to bottom, rgba(10, 10, 10, .92), rgba(10, 10, 10, 0));
+            pointer-events: none;
         }
 
         .approach__title {
@@ -44,11 +51,6 @@
             position: absolute;
             inset: 0;
             padding-top: 22vh;
-            /* space for title area */
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            align-items: stretch;
-            gap: 3vw;
             padding-left: 6vw;
             padding-right: 6vw;
         }
@@ -59,8 +61,20 @@
             will-change: transform;
         }
 
+        .approach__bottomViewport {
+            position: relative;
+            height: calc((100vh - 22vh) * 0.75);
+            /* only the bottom band */
+            overflow: hidden;
+            /* IMPORTANT: clips the scrolling track */
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3vw;
+            align-items: stretch;
+        }
+
         .approach__step {
-            height: calc(100vh - 22vh);
+            height: calc((100vh - 22vh) * 0.75);
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 3vw;
@@ -77,15 +91,21 @@
             position: relative;
             border-radius: var(--cardRadius);
             overflow: hidden;
-            width: min(520px, 100%);
+            width: min(100%, 100%);
             aspect-ratio: 16/9;
             background: #222;
             box-shadow: 0 24px 60px rgba(0, 0, 0, .45);
             filter: saturate(0.9);
             opacity: .55;
             /* inactive look */
-            transform: translateZ(0);
+            transform: translateZ(0) scale(0.96);
             transition: opacity .25s ease, transform .25s ease;
+        }
+
+        /* Active step final state */
+        .approach__step.is-active .approach__card {
+            opacity: 1;
+            transform: scale(1) translateY(-4px);
         }
 
         .approach__card img {
@@ -93,6 +113,18 @@
             height: 100%;
             object-fit: cover;
             display: block;
+            position: relative;
+            z-index: 1;
+        }
+
+        .approach__revealMask {
+            position: absolute;
+            inset: 0;
+            background: #0b0b0b;
+            transform: scaleY(1);
+            transform-origin: top;
+            z-index: 3;
+            pointer-events: none;
         }
 
         .approach__cardOverlay {
@@ -100,6 +132,7 @@
             inset: 0;
             background: radial-gradient(800px 400px at 20% 30%, rgba(255, 255, 255, .12), transparent 60%),
                 linear-gradient(to top, rgba(0, 0, 0, .65), rgba(0, 0, 0, .15));
+            z-index: 4;
         }
 
         .approach__cardText {
@@ -108,6 +141,7 @@
             bottom: 16px;
             font: 900 clamp(26px, 3vw, 44px)/1 system-ui;
             letter-spacing: .02em;
+            z-index: 5;
         }
 
         .approach__copy {
@@ -116,13 +150,19 @@
             max-width: 38ch;
             color: var(--muted);
             text-transform: uppercase;
+            transform: translateY(24px);
+        }
+
+        .approach__step.is-active .approach__copy {
+            opacity: 1;
+            transform: translateY(0);
         }
 
         /* Center indicator */
         .approach__indicator {
             position: absolute;
-            top: 22vh;
-            bottom: 6vh;
+            top: 0;
+            bottom: 0;
             left: calc(50% - 45px);
             /* column center of the 90px middle column */
             width: 90px;
@@ -181,8 +221,11 @@
         /* Responsive */
         @media (max-width: 900px) {
             .approach__bottom {
-                grid-template-columns: 1fr;
                 padding-top: 18vh;
+            }
+
+            .approach__bottomViewport {
+                grid-template-columns: 1fr;
             }
 
             .approach__step {
@@ -209,92 +252,98 @@
 
             <!-- Bottom (scroll-driven) -->
             <div class="approach__bottom">
-                <!-- Steps Track (moves up) -->
-                <div class="approach__track" id="approachTrack">
-                    <!-- Step 1 -->
-                    <div class="approach__step" data-step>
-                        <div class="approach__left">
-                            <article class="approach__card">
-                                <img src="https://picsum.photos/id/1011/800/500" alt="" />
-                                <div class="approach__cardOverlay"></div>
-                                <div class="approach__cardText">DISCOVER</div>
-                            </article>
+                <div class="approach__bottomViewport">
+                    <!-- Steps Track (moves up) -->
+                    <div class="approach__track" id="approachTrack">
+                        <!-- Step 1 -->
+                        <div class="approach__step" data-step>
+                            <div class="approach__left">
+                                <article class="approach__card">
+                                    <img src="https://picsum.photos/id/1011/800/500" alt="" />
+                                    <div class="approach__revealMask" aria-hidden="true"></div>
+                                    <div class="approach__cardOverlay"></div>
+                                    <div class="approach__cardText">DISCOVER</div>
+                                </article>
+                            </div>
+
+                            <div class="approach__right">
+                                <p class="approach__copy">
+                                    WE DIVE DEEP INTO YOUR BRAND, AUDIENCE, AND VISION TO UNCOVER
+                                    THE STORY WORTH TELLING.
+                                </p>
+                            </div>
                         </div>
 
-                        <div class="approach__right">
-                            <p class="approach__copy">
-                                WE DIVE DEEP INTO YOUR BRAND, AUDIENCE, AND VISION TO UNCOVER
-                                THE STORY WORTH TELLING.
-                            </p>
+                        <!-- Step 2 -->
+                        <div class="approach__step" data-step>
+                            <div class="approach__left">
+                                <article class="approach__card">
+                                    <img src="https://picsum.photos/id/1015/800/500" alt="" />
+                                    <div class="approach__revealMask" aria-hidden="true"></div>
+                                    <div class="approach__cardOverlay"></div>
+                                    <div class="approach__cardText">CREATE</div>
+                                </article>
+                            </div>
+
+                            <div class="approach__right">
+                                <p class="approach__copy">
+                                    FROM SCRIPTING TO ON-SET PRODUCTION, WE SHAPE COMPELLING VISUALS
+                                    THAT CONNECT EMOTIONALLY.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Step 3 -->
+                        <div class="approach__step" data-step>
+                            <div class="approach__left">
+                                <article class="approach__card">
+                                    <img src="https://picsum.photos/id/1025/800/500" alt="" />
+                                    <div class="approach__revealMask" aria-hidden="true"></div>
+                                    <div class="approach__cardOverlay"></div>
+                                    <div class="approach__cardText">REFINE</div>
+                                </article>
+                            </div>
+
+                            <div class="approach__right">
+                                <p class="approach__copy">
+                                    WE EDIT, POLISH, AND ELEVATE—ENSURING EVERY FRAME ALIGNS WITH
+                                    YOUR MESSAGE AND GOALS.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Step 4 -->
+                        <div class="approach__step" data-step>
+                            <div class="approach__left">
+                                <article class="approach__card">
+                                    <img src="https://picsum.photos/id/1035/800/500" alt="" />
+                                    <div class="approach__revealMask" aria-hidden="true"></div>
+                                    <div class="approach__cardOverlay"></div>
+                                    <div class="approach__cardText">DELIVER</div>
+                                </article>
+                            </div>
+
+                            <div class="approach__right">
+                                <p class="approach__copy">
+                                    HIGH-QUALITY ASSETS DELIVERED WITH PRECISION, READY TO MAKE AN
+                                    IMPACT ACROSS ANY PLATFORM.
+                                </p>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Step 2 -->
-                    <div class="approach__step" data-step>
-                        <div class="approach__left">
-                            <article class="approach__card">
-                                <img src="https://picsum.photos/id/1015/800/500" alt="" />
-                                <div class="approach__cardOverlay"></div>
-                                <div class="approach__cardText">CREATE</div>
-                            </article>
+                    <!-- Center Indicator -->
+                    <div class="approach__indicator" aria-hidden="true">
+                        <div class="approach__line"></div>
+                        <div class="approach__lineFill" id="approachLineFill"></div>
+
+                        <!-- (Optional) dots aligned with each step -->
+                        <div class="approach__dots" id="approachDots">
+                            <span class="dot"></span>
+                            <span class="dot"></span>
+                            <span class="dot"></span>
+                            <span class="dot"></span>
                         </div>
-
-                        <div class="approach__right">
-                            <p class="approach__copy">
-                                FROM SCRIPTING TO ON-SET PRODUCTION, WE SHAPE COMPELLING VISUALS
-                                THAT CONNECT EMOTIONALLY.
-                            </p>
-                        </div>
-                    </div>
-
-                    <!-- Step 3 -->
-                    <div class="approach__step" data-step>
-                        <div class="approach__left">
-                            <article class="approach__card">
-                                <img src="https://picsum.photos/id/1025/800/500" alt="" />
-                                <div class="approach__cardOverlay"></div>
-                                <div class="approach__cardText">REFINE</div>
-                            </article>
-                        </div>
-
-                        <div class="approach__right">
-                            <p class="approach__copy">
-                                WE EDIT, POLISH, AND ELEVATE—ENSURING EVERY FRAME ALIGNS WITH
-                                YOUR MESSAGE AND GOALS.
-                            </p>
-                        </div>
-                    </div>
-
-                    <!-- Step 4 -->
-                    <div class="approach__step" data-step>
-                        <div class="approach__left">
-                            <article class="approach__card">
-                                <img src="https://picsum.photos/id/1035/800/500" alt="" />
-                                <div class="approach__cardOverlay"></div>
-                                <div class="approach__cardText">DELIVER</div>
-                            </article>
-                        </div>
-
-                        <div class="approach__right">
-                            <p class="approach__copy">
-                                HIGH-QUALITY ASSETS DELIVERED WITH PRECISION, READY TO MAKE AN
-                                IMPACT ACROSS ANY PLATFORM.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Center Indicator -->
-                <div class="approach__indicator" aria-hidden="true">
-                    <div class="approach__line"></div>
-                    <div class="approach__lineFill" id="approachLineFill"></div>
-
-                    <!-- (Optional) dots aligned with each step -->
-                    <div class="approach__dots" id="approachDots">
-                        <span class="dot"></span>
-                        <span class="dot"></span>
-                        <span class="dot"></span>
-                        <span class="dot"></span>
                     </div>
                 </div>
             </div>
@@ -310,16 +359,32 @@
     <script>
         gsap.registerPlugin(ScrollTrigger);
 
+        let activeIndex = 0;
+
         const section = document.querySelector("#approach");
         const inner = section.querySelector(".approach__inner");
+        const viewport = section.querySelector(".approach__bottomViewport");
         const track = document.querySelector("#approachTrack");
         const steps = gsap.utils.toArray("[data-step]");
         const lineFill = document.querySelector("#approachLineFill");
         const dots = gsap.utils.toArray("#approachDots .dot");
 
+        // initial active state (reveal first image immediately)
+        steps[0].classList.add("is-active");
+        gsap.set(steps[0].querySelector(".approach__copy"), { opacity: 1, y: 0 });
+
+        const firstMask = steps[0].querySelector(".approach__revealMask");
+        if (firstMask) {
+            gsap.set(firstMask, { scaleY: 0, transformOrigin: "top" });
+        }
+
+
+        const stepHeight = () => steps[0].offsetHeight;
+        const getMask = (stepEl) => stepEl.querySelector(".approach__revealMask");
+
         // Total scroll distance = (steps-1) screens worth of movement
         const stepCount = steps.length;
-        const moveY = () => (stepCount - 1) * (inner.clientHeight * 0.78);
+        const moveY = () => (stepCount - 1) * stepHeight();
         // 0.78 is roughly (100vh - top padding). You can tweak for perfect alignment.
 
         // Pin + scrub timeline
@@ -327,26 +392,123 @@
             scrollTrigger: {
                 trigger: section,
                 start: "top top",
-                end: () => "+=" + (stepCount * inner.clientHeight),
-                scrub: 1,
+                end: () => "+=" + ((stepCount - 1) * stepHeight()),
+                scrub: 0.6,
                 pin: true,
                 anticipatePin: 1,
                 // markers: true,
+                snap: {
+                    snapTo: 1 / (stepCount - 1),
+                    duration: { min: 0.18, max: 0.48 },
+                    delay: 0.05,
+                    ease: "power2.out",
+                    inertia: false
+                },
                 onUpdate: (self) => {
-                    // Fill line based on progress
                     gsap.set(lineFill, { height: (self.progress * 100) + "%" });
 
-                    // Active step based on progress segments
-                    const index = Math.min(stepCount - 1, Math.floor(self.progress * stepCount));
-                    steps.forEach((el, i) => el.classList.toggle("is-active", i === index));
+                    const index = Math.round(self.progress * (stepCount - 1));
 
-                    // Optional dot activation
+                    if (index !== activeIndex) {
+                        const prev = steps[activeIndex];
+                        const next = steps[index];
+
+                        // OUT (previous)
+                        if (prev) {
+                            gsap.to(prev.querySelector(".approach__copy"), {
+                                y: -24,
+                                opacity: 0,
+                                duration: 0.35,
+                                ease: "power2.in"
+                            });
+
+                            gsap.to(prev.querySelector(".approach__card"), {
+                                scale: 0.96,
+                                opacity: 0.55,
+                                duration: 0.35,
+                                ease: "power2.in"
+                            });
+
+                            // reset mask so it can reveal again next time
+                            const prevMask = prev.querySelector(".approach__revealMask");
+                            if (prevMask) {
+                                gsap.set(prevMask, { scaleY: 1, transformOrigin: "top" });
+                            }
+
+                            prev.classList.remove("is-active");
+                        }
+
+                        // IN (new)
+                        if (next) {
+                            // mask reveal
+                            const mask = next.querySelector(".approach__revealMask");
+                            if (mask) {
+                                gsap.set(mask, { scaleY: 1, transformOrigin: "top" });
+                                gsap.to(mask, {
+                                    scaleY: 0,
+                                    duration: 0.85,
+                                    delay: 0.62,
+                                    ease: "power3.out"
+                                });
+                            }
+
+                            gsap.fromTo(
+                                next.querySelector("img"),
+                                { y: 12, scale: 1.03 },
+                                {
+                                    y: 0,
+                                    scale: 1,
+                                    duration: 0.85,
+                                    delay: 0.12,
+                                    ease: "power3.out"
+                                }
+                            );
+
+                            // text in
+                            gsap.fromTo(
+                                next.querySelector(".approach__copy"),
+                                { y: 24, opacity: 0 },
+                                { y: 0, opacity: 1, duration: 0.45, ease: "power2.out", delay: 0.08 }
+                            );
+
+                            // card in
+                            gsap.fromTo(
+                                next.querySelector(".approach__card"),
+                                { scale: 0.98, opacity: 0.55 },
+                                { scale: 1, opacity: 1, duration: 0.45, ease: "power2.out" }
+                            );
+
+                            next.classList.add("is-active");
+                        }
+
+                        activeIndex = index;
+                    }
+
+
+                    // dots
                     dots.forEach((d, i) => {
                         const active = i <= index;
                         d.style.background = active ? "var(--gold)" : "rgba(255,255,255,.25)";
                         d.style.transform = active ? "scale(1.15)" : "scale(1)";
                     });
-                }
+                },
+                // onUpdate: (self) => {
+                //     // Fill line based on progress
+                //     gsap.set(lineFill, { height: (self.progress * 100) + "%" });
+
+                //     // Active step based on progress segments
+                //     // const index = Math.min(stepCount - 1, Math.floor(self.progress * stepCount));
+                //     const index = Math.round(self.progress * (stepCount - 1));
+                //     steps.forEach((el, i) => el.classList.toggle("is-active", i === index));
+
+                //     // Optional dot activation
+                //     dots.forEach((d, i) => {
+                //         const active = i <= index;
+                //         d.style.background = active ? "var(--gold)" : "rgba(255,255,255,.25)";
+                //         d.style.transform = active ? "scale(1.15)" : "scale(1)";
+                //     });
+                // },
+
             }
         });
 
@@ -357,6 +519,7 @@
 
         // Ensure correct sizes on resize
         window.addEventListener("resize", () => ScrollTrigger.refresh());
+        ScrollTrigger.refresh();
     </script>
 
 </body>
