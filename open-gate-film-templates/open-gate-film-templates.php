@@ -14,39 +14,6 @@ define('OGFT_VERSION', '0.1.0');
 define('OGFT_PATH', plugin_dir_path(__FILE__));
 define('OGFT_URL', plugin_dir_url(__FILE__));
 
-function ogft_default_featured_work_items()
-{
-    return [
-        [
-            'link' => '/work/project-1',
-            'kicker' => 'Brand / Web',
-            'title' => 'Project One',
-            'meta' => '2025 • Motion + UI',
-            'video_src' => 'project-1.mp4',
-            'poster_src' => 'project-1-poster.jpg',
-            'overlay_src' => 'project-1-poster.jpg',
-        ],
-        [
-            'link' => '/work/project-2',
-            'kicker' => 'SaaS / Product',
-            'title' => 'Project Two',
-            'meta' => '2025 • Animation',
-            'video_src' => 'project-1.mp4',
-            'poster_src' => 'project-1-poster.jpg',
-            'overlay_src' => 'project-1-poster.jpg',
-        ],
-        [
-            'link' => '/work/project-3',
-            'kicker' => 'Ecommerce',
-            'title' => 'Project Three',
-            'meta' => '2024 • Web + Video',
-            'video_src' => 'project-1.mp4',
-            'poster_src' => 'project-1-poster.jpg',
-            'overlay_src' => 'project-1-poster.jpg',
-        ],
-    ];
-}
-
 function ogft_default_stats_items()
 {
     return [
@@ -82,8 +49,14 @@ function ogft_get_settings()
     $defaults = [
         'enable_featured_work' => '1',
         'enable_stats' => '1',
-        'featured_work_items' => wp_json_encode(ogft_default_featured_work_items(), JSON_PRETTY_PRINT),
+        'enable_featured_slider' => '0',
+        'enable_logo_slider' => '0',
+        'enable_services' => '0',
+        'featured_work_detail_page_id' => '',
         'stats_items' => wp_json_encode(ogft_default_stats_items(), JSON_PRETTY_PRINT),
+        'featured_slider_image_ids' => '',
+        'logo_slider_image_ids' => '',
+        'services_heading' => 'Our Services',
     ];
 
     $settings = get_option('ogft_settings', []);
@@ -103,6 +76,280 @@ function ogft_parse_json_items($value, $fallback)
     }
 
     return $decoded;
+}
+
+function ogft_parse_video_data($url)
+{
+    if (!$url) {
+        return [
+            'type' => '',
+            'embed_src' => '',
+            'embed_id' => '',
+        ];
+    }
+
+    $parsed = wp_parse_url($url);
+    if (!$parsed || empty($parsed['host'])) {
+        return [
+            'type' => 'mp4',
+            'embed_src' => '',
+            'embed_id' => '',
+        ];
+    }
+
+    $host = strtolower($parsed['host']);
+    $path = isset($parsed['path']) ? trim($parsed['path'], '/') : '';
+
+    $ext = strtolower(pathinfo(parse_url($url, PHP_URL_PATH) ?? '', PATHINFO_EXTENSION));
+    if (in_array($ext, ['mp4', 'webm', 'ogg'], true)) {
+        return [
+            'type' => 'mp4',
+            'embed_src' => '',
+            'embed_id' => '',
+        ];
+    }
+
+    if (str_contains($host, 'youtube.com') || str_contains($host, 'youtu.be')) {
+        $video_id = '';
+        if (str_contains($host, 'youtu.be')) {
+            $video_id = $path;
+        } else {
+            parse_str($parsed['query'] ?? '', $query);
+            if (!empty($query['v'])) {
+                $video_id = $query['v'];
+            } elseif (str_starts_with($path, 'embed/')) {
+                $video_id = substr($path, strlen('embed/'));
+            }
+        }
+
+        if ($video_id) {
+            return [
+                'type' => 'youtube',
+                'embed_src' => sprintf(
+                    'https://www.youtube.com/embed/%s?enablejsapi=1&controls=0&rel=0&playsinline=1&mute=1',
+                    rawurlencode($video_id)
+                ),
+                'embed_id' => $video_id,
+            ];
+        }
+    }
+
+    if (str_contains($host, 'vimeo.com')) {
+        $segments = explode('/', $path);
+        $segments = array_filter($segments);
+        $last = end($segments);
+        if ($last && ctype_digit($last)) {
+            return [
+                'type' => 'vimeo',
+                'embed_src' => sprintf(
+                    'https://player.vimeo.com/video/%s?background=1&muted=1&autopause=0',
+                    $last
+                ),
+                'embed_id' => $last,
+            ];
+        }
+    }
+
+    return [
+        'type' => 'mp4',
+        'embed_src' => '',
+        'embed_id' => '',
+    ];
+}
+
+function ogft_build_slider_items_from_ids($ids_string)
+{
+    if (!$ids_string) {
+        return [];
+    }
+
+    $ids = array_filter(array_map('absint', explode(',', $ids_string)));
+    if (!$ids) {
+        return [];
+    }
+
+    $items = [];
+    foreach ($ids as $id) {
+        $image = wp_get_attachment_image_url($id, 'full');
+        $thumb = wp_get_attachment_image_url($id, 'medium_large') ?: wp_get_attachment_image_url($id, 'large');
+        $title = get_the_title($id);
+
+        if ($image) {
+            $items[] = [
+                'image' => $image,
+                'thumb' => $thumb ?: $image,
+                'title' => $title ?: '',
+            ];
+        }
+    }
+
+    return $items;
+}
+
+function ogft_build_logo_items_from_ids($ids_string)
+{
+    $items = ogft_build_slider_items_from_ids($ids_string);
+    return array_map(function ($item) {
+        return [
+            'image' => isset($item['image']) ? $item['image'] : '',
+            'thumb' => isset($item['thumb']) ? $item['thumb'] : '',
+            'title' => isset($item['title']) ? $item['title'] : '',
+        ];
+    }, $items);
+}
+
+function ogft_get_work_item_by_id($post_id)
+{
+    $post = get_post($post_id);
+    if (!$post || $post->post_type !== 'work' || $post->post_status !== 'publish') {
+        return null;
+    }
+
+    $terms = get_the_terms($post, 'work-type');
+    $kicker = (!is_wp_error($terms) && $terms) ? implode(' / ', wp_list_pluck($terms, 'name')) : '';
+
+    $meta = get_post_meta($post->ID, 'ogft_meta', true);
+    if ($meta === '') {
+        $meta = get_post_meta($post->ID, 'meta', true);
+    }
+    if ($meta === '') {
+        $meta = get_the_date('', $post);
+    }
+
+    $video_src = get_post_meta($post->ID, 'video_src', true);
+    if (!$video_src && function_exists('get_field')) {
+        $acf_video = get_field('video_src', $post->ID);
+        if (is_array($acf_video) && isset($acf_video['url'])) {
+            $video_src = $acf_video['url'];
+        } elseif (is_string($acf_video)) {
+            $video_src = $acf_video;
+        }
+    }
+    $video_data = ogft_parse_video_data($video_src);
+
+    $poster_src = get_post_meta($post->ID, 'poster_src', true);
+    $overlay_src = get_post_meta($post->ID, 'overlay_src', true);
+    $thumbnail = get_the_post_thumbnail_url($post, 'large');
+    if (!$poster_src && $thumbnail) {
+        $poster_src = $thumbnail;
+    }
+    if (!$overlay_src && $thumbnail) {
+        $overlay_src = $thumbnail;
+    }
+
+    $excerpt = get_the_excerpt($post);
+    if (!$excerpt) {
+        $excerpt = wp_trim_words(wp_strip_all_tags(get_post_field('post_content', $post->ID)), 60);
+    }
+
+    return [
+        'id' => $post->ID,
+        'link' => get_permalink($post),
+        'kicker' => $kicker,
+        'title' => get_the_title($post),
+        'meta' => $meta,
+        'video_src' => $video_src,
+        'video_type' => $video_data['type'],
+        'embed_src' => $video_data['embed_src'],
+        'embed_id' => isset($video_data['embed_id']) ? $video_data['embed_id'] : '',
+        'poster_src' => $poster_src ?: '',
+        'overlay_src' => $overlay_src ?: '',
+        'description' => $excerpt,
+    ];
+}
+
+function ogft_get_featured_work_items_from_posts($atts = [])
+{
+    $atts = shortcode_atts(
+        [
+            'work_type' => '',
+            'limit' => 6,
+        ],
+        $atts,
+        'open_gate_featured_work'
+    );
+
+    $tax_terms = [];
+    if (!empty($atts['work_type'])) {
+        $tax_terms = array_filter(array_map('sanitize_title', array_map('trim', explode(',', $atts['work_type']))));
+    }
+
+    $query = new WP_Query([
+        'post_type' => 'work',
+        'post_status' => 'publish',
+        'posts_per_page' => (int)$atts['limit'] > 0 ? (int)$atts['limit'] : -1,
+        'no_found_rows' => true,
+        'tax_query' => $tax_terms ? [
+            [
+                'taxonomy' => 'work-type',
+                'field' => 'slug',
+                'terms' => $tax_terms,
+            ],
+        ] : [],
+    ]);
+
+    if (!$query->have_posts()) {
+        return [];
+    }
+
+    $settings = ogft_get_settings();
+    $detail_page_id = isset($settings['featured_work_detail_page_id']) ? absint($settings['featured_work_detail_page_id']) : 0;
+
+    $items = [];
+
+    foreach ($query->posts as $post) {
+        $terms = get_the_terms($post, 'work-type');
+        $kicker = (!is_wp_error($terms) && $terms) ? implode(' / ', wp_list_pluck($terms, 'name')) : '';
+
+        $meta = get_post_meta($post->ID, 'ogft_meta', true);
+        if ($meta === '') {
+            $meta = get_post_meta($post->ID, 'meta', true);
+        }
+        if ($meta === '') {
+            $meta = get_the_date('', $post);
+        }
+
+        $video_src = get_post_meta($post->ID, 'video_src', true);
+        if (!$video_src && function_exists('get_field')) {
+            $acf_video = get_field('video_src', $post->ID);
+            // Support ACF URL or File field (array) return formats.
+            if (is_array($acf_video) && isset($acf_video['url'])) {
+                $video_src = $acf_video['url'];
+            } elseif (is_string($acf_video)) {
+                $video_src = $acf_video;
+            }
+        }
+        $video_data = ogft_parse_video_data($video_src);
+
+        $poster_src = get_post_meta($post->ID, 'poster_src', true);
+        $overlay_src = get_post_meta($post->ID, 'overlay_src', true);
+        $thumbnail = get_the_post_thumbnail_url($post, 'large');
+        if (!$poster_src && $thumbnail) {
+            $poster_src = $thumbnail;
+        }
+        if (!$overlay_src && $thumbnail) {
+            $overlay_src = $thumbnail;
+        }
+
+        $items[] = [
+            'id' => $post->ID,
+            'link' => get_permalink($post),
+            'kicker' => $kicker,
+            'title' => get_the_title($post),
+            'meta' => $meta,
+            'video_src' => $video_src,
+            'video_type' => $video_data['type'],
+            'embed_src' => $video_data['embed_src'],
+            'embed_id' => isset($video_data['embed_id']) ? $video_data['embed_id'] : '',
+            'poster_src' => $poster_src ?: '',
+            'overlay_src' => $overlay_src ?: '',
+            'detail_url' => $detail_page_id ? add_query_arg('ogft_work', $post->ID, get_permalink($detail_page_id)) : get_permalink($post),
+        ];
+    }
+
+    wp_reset_postdata();
+
+    return $items;
 }
 
 function ogft_register_settings_page()
@@ -133,10 +380,20 @@ function ogft_sanitize_settings($input)
 
     $sanitized['enable_featured_work'] = empty($input['enable_featured_work']) ? '0' : '1';
     $sanitized['enable_stats'] = empty($input['enable_stats']) ? '0' : '1';
-
-    $sanitized['featured_work_items'] = isset($input['featured_work_items'])
-        ? sanitize_textarea_field($input['featured_work_items'])
+    $sanitized['enable_featured_slider'] = empty($input['enable_featured_slider']) ? '0' : '1';
+    $sanitized['enable_logo_slider'] = empty($input['enable_logo_slider']) ? '0' : '1';
+    $sanitized['enable_services'] = empty($input['enable_services']) ? '0' : '1';
+    $sanitized['featured_work_detail_page_id'] = isset($input['featured_work_detail_page_id'])
+        ? (string)absint($input['featured_work_detail_page_id'])
         : '';
+    $sanitized['featured_slider_image_ids'] = isset($input['featured_slider_image_ids'])
+        ? implode(',', array_filter(array_map('absint', explode(',', $input['featured_slider_image_ids']))))
+        : '';
+    $sanitized['logo_slider_image_ids'] = isset($input['logo_slider_image_ids'])
+        ? implode(',', array_filter(array_map('absint', explode(',', $input['logo_slider_image_ids']))))
+        : '';
+    $sanitized['services_heading'] = isset($input['services_heading']) ? sanitize_text_field($input['services_heading']) : 'Our Services';
+
     $sanitized['stats_items'] = isset($input['stats_items'])
         ? sanitize_textarea_field($input['stats_items'])
         : '';
@@ -160,13 +417,20 @@ function ogft_render_settings_page()
             <?php settings_fields('ogft_settings_group'); ?>
 
             <h2>Featured Work</h2>
-            <p><strong>Shortcode:</strong> <code>[open_gate_featured_work]</code></p>
+            <p><strong>Shortcode:</strong> <code>[open_gate_featured_work]</code> (optionally filter by work type slug: <code>[open_gate_featured_work work_type="commercial"]</code>). Uses published <code>work</code> posts.</p>
             <label>
                 <input type="checkbox" name="ogft_settings[enable_featured_work]" value="1" <?php checked($settings['enable_featured_work'], '1'); ?> />
                 Enable Featured Work
             </label>
-            <p>JSON array of cards (link, kicker, title, meta, video_src, poster_src, overlay_src).</p>
-            <textarea name="ogft_settings[featured_work_items]" rows="14" class="large-text code"><?php echo esc_textarea($settings['featured_work_items']); ?></textarea>
+            <p>Select the page to open for work detail modals:</p>
+            <?php
+            wp_dropdown_pages([
+                'name' => 'ogft_settings[featured_work_detail_page_id]',
+                'selected' => isset($settings['featured_work_detail_page_id']) ? absint($settings['featured_work_detail_page_id']) : 0,
+                'show_option_none' => '— Select a page —',
+                'option_none_value' => '',
+            ]);
+            ?>
 
             <hr />
 
@@ -179,24 +443,131 @@ function ogft_render_settings_page()
             <p>JSON array of cards (kicker, value, label, bg_image).</p>
             <textarea name="ogft_settings[stats_items]" rows="14" class="large-text code"><?php echo esc_textarea($settings['stats_items']); ?></textarea>
 
+            <hr />
+
+            <h2>Featured Image Slider</h2>
+            <p><strong>Shortcode:</strong> <code>[open_gate_featured_slider]</code>. Renders a main image with clickable thumbnails.</p>
+            <label>
+                <input type="checkbox" name="ogft_settings[enable_featured_slider]" value="1" <?php checked($settings['enable_featured_slider'], '1'); ?> />
+                Enable Featured Slider
+            </label>
+            <p>Select images for the slider (order is preserved). Thumbnails use medium_large where available.</p>
+            <div class="ogft-media-picker" data-input="featured_slider_image_ids">
+                <input type="hidden" name="ogft_settings[featured_slider_image_ids]" value="<?php echo esc_attr($settings['featured_slider_image_ids']); ?>" />
+                <button type="button" class="button ogft-media-picker-btn">Choose Images</button>
+                <div class="ogft-media-picker__preview"></div>
+            </div>
+
+            <hr />
+
+            <h2>Logo Slider</h2>
+            <p><strong>Shortcode:</strong> <code>[open_gate_logo_slider]</code>. Auto-scrolls logo stacks with GSAP.</p>
+            <label>
+                <input type="checkbox" name="ogft_settings[enable_logo_slider]" value="1" <?php checked($settings['enable_logo_slider'], '1'); ?> />
+                Enable Logo Slider
+            </label>
+            <p>Select logo images (order is preserved). Layout repeats: two containers with 2 stacked logos, then one container with a single logo.</p>
+            <div class="ogft-media-picker" data-input="logo_slider_image_ids">
+                <input type="hidden" name="ogft_settings[logo_slider_image_ids]" value="<?php echo esc_attr($settings['logo_slider_image_ids']); ?>" />
+                <button type="button" class="button ogft-media-picker-btn">Choose Logos</button>
+                <div class="ogft-media-picker__preview"></div>
+            </div>
+
+            <hr />
+
+            <h2>Services</h2>
+            <p><strong>Shortcode:</strong> <code>[open_gate_services]</code>. Pulls published <code>service</code> posts and animates rows on scroll.</p>
+            <label>
+                <input type="checkbox" name="ogft_settings[enable_services]" value="1" <?php checked($settings['enable_services'], '1'); ?> />
+                Enable Services Section
+            </label>
+            <p>Heading text:</p>
+            <input type="text" name="ogft_settings[services_heading]" class="regular-text" value="<?php echo esc_attr($settings['services_heading']); ?>" />
+
             <?php submit_button('Save Settings'); ?>
         </form>
     </div>
     <?php
 }
 
-function ogft_enqueue_featured_work_assets()
+function ogft_enqueue_featured_slider_assets()
 {
     wp_enqueue_style(
-        'ogft-featured-work',
-        OGFT_URL . 'features/featured-work/style.css',
+        'ogft-featured-slider',
+        OGFT_URL . 'features/featured-slider/style.css',
+        [],
+        OGFT_VERSION
+    );
+
+    wp_enqueue_script(
+        'gsap',
+        'https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js',
+        [],
+        '3.12.5',
+        true
+    );
+
+    wp_enqueue_script(
+        'ogft-featured-slider',
+        OGFT_URL . 'features/featured-slider/script.js',
+        ['gsap'],
+        OGFT_VERSION,
+        true
+    );
+}
+
+function ogft_enqueue_logo_slider_assets()
+{
+    wp_enqueue_style(
+        'ogft-logo-slider',
+        OGFT_URL . 'features/logo-slider/style.css',
+        [],
+        OGFT_VERSION
+    );
+
+    wp_enqueue_script(
+        'gsap',
+        'https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js',
+        [],
+        '3.12.5',
+        true
+    );
+
+    wp_enqueue_script(
+        'ogft-logo-slider',
+        OGFT_URL . 'features/logo-slider/script.js',
+        ['gsap'],
+        OGFT_VERSION,
+        true
+    );
+}
+
+function ogft_enqueue_featured_work_modal_assets()
+{
+    wp_enqueue_style(
+        'plyr',
+        'https://cdn.jsdelivr.net/npm/plyr@3.7.8/dist/plyr.css',
+        [],
+        '3.7.8'
+    );
+    wp_enqueue_script(
+        'plyr',
+        'https://cdn.jsdelivr.net/npm/plyr@3.7.8/dist/plyr.polyfilled.js',
+        [],
+        '3.7.8',
+        true
+    );
+
+    wp_enqueue_style(
+        'ogft-featured-work-modal',
+        OGFT_URL . 'features/featured-work/modal.css',
         [],
         OGFT_VERSION
     );
     wp_enqueue_script(
-        'ogft-featured-work',
-        OGFT_URL . 'features/featured-work/script.js',
-        [],
+        'ogft-featured-work-modal',
+        OGFT_URL . 'features/featured-work/modal.js',
+        ['plyr'],
         OGFT_VERSION,
         true
     );
@@ -228,26 +599,263 @@ function ogft_enqueue_stats_assets()
     );
 }
 
-function ogft_shortcode_featured_work()
+function ogft_shortcode_featured_work($atts = [])
 {
     $settings = ogft_get_settings();
     if (empty($settings['enable_featured_work'])) {
         return '';
     }
 
-    $items = ogft_parse_json_items($settings['featured_work_items'], ogft_default_featured_work_items());
+    $items = ogft_get_featured_work_items_from_posts($atts);
+
     if (!$items) {
         return '';
     }
 
     ogft_enqueue_featured_work_assets();
-
     ob_start();
     $template = OGFT_PATH . 'features/featured-work/template.php';
     include $template;
     return ob_get_clean();
 }
 add_shortcode('open_gate_featured_work', 'ogft_shortcode_featured_work');
+
+function ogft_shortcode_featured_slider()
+{
+    $settings = ogft_get_settings();
+    if (empty($settings['enable_featured_slider'])) {
+        return '';
+    }
+
+    $items = ogft_build_slider_items_from_ids($settings['featured_slider_image_ids']);
+    if (!$items) {
+        return '';
+    }
+
+    ogft_enqueue_featured_slider_assets();
+
+    static $instance = 0;
+    $instance++;
+    $slider_id = 'ogft-featured-slider-' . $instance;
+
+    ob_start();
+    $template = OGFT_PATH . 'features/featured-slider/template.php';
+    $ogft_slider_items = $items;
+    $ogft_slider_id = $slider_id;
+    include $template;
+    return ob_get_clean();
+}
+add_shortcode('open_gate_featured_slider', 'ogft_shortcode_featured_slider');
+
+function ogft_shortcode_logo_slider()
+{
+    $settings = ogft_get_settings();
+    if (empty($settings['enable_logo_slider'])) {
+        return '';
+    }
+
+    $items = ogft_build_logo_items_from_ids($settings['logo_slider_image_ids']);
+    if (!$items) {
+        return '';
+    }
+
+    ogft_enqueue_logo_slider_assets();
+
+    static $instance = 0;
+    $instance++;
+    $section_id = 'ogft-logo-slider-' . $instance;
+
+    ob_start();
+    $template = OGFT_PATH . 'features/logo-slider/template.php';
+    $ogft_logo_items = $items;
+    $ogft_logo_id = $section_id;
+    include $template;
+    return ob_get_clean();
+}
+add_shortcode('open_gate_logo_slider', 'ogft_shortcode_logo_slider');
+
+function ogft_get_services_items()
+{
+    $query = new WP_Query([
+        'post_type' => 'service',
+        'post_status' => 'publish',
+        'posts_per_page' => -1,
+        'orderby' => 'menu_order title',
+        'order' => 'ASC',
+        'no_found_rows' => true,
+    ]);
+
+    if (!$query->have_posts()) {
+        return [];
+    }
+
+    $items = [];
+    foreach ($query->posts as $post) {
+        $title = get_the_title($post);
+        $excerpt = get_the_excerpt($post);
+        if (!$excerpt) {
+            $excerpt = wp_trim_words(wp_strip_all_tags(get_post_field('post_content', $post->ID)), 40);
+        }
+
+        $service_url = get_post_meta($post->ID, 'services_url', true);
+        if (!$service_url && function_exists('get_field')) {
+            $service_url = get_field('services_url', $post->ID);
+        }
+        $service_url = $service_url ? esc_url($service_url) : get_permalink($post);
+
+        $items[] = [
+            'title' => $title,
+            'excerpt' => $excerpt,
+            'url' => $service_url,
+        ];
+    }
+
+    wp_reset_postdata();
+
+    return $items;
+}
+
+function ogft_enqueue_services_assets()
+{
+    wp_enqueue_style(
+        'ogft-services',
+        OGFT_URL . 'features/services/style.css',
+        [],
+        OGFT_VERSION
+    );
+
+    wp_enqueue_script(
+        'gsap',
+        'https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js',
+        [],
+        '3.12.5',
+        true
+    );
+    wp_enqueue_script(
+        'gsap-scrolltrigger',
+        'https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js',
+        ['gsap'],
+        '3.12.5',
+        true
+    );
+
+    wp_enqueue_script(
+        'ogft-services',
+        OGFT_URL . 'features/services/script.js',
+        ['gsap', 'gsap-scrolltrigger'],
+        OGFT_VERSION,
+        true
+    );
+}
+
+function ogft_shortcode_services()
+{
+    $settings = ogft_get_settings();
+    if (empty($settings['enable_services'])) {
+        return '';
+    }
+
+    $items = ogft_get_services_items();
+    if (!$items) {
+        return '';
+    }
+
+    ogft_enqueue_services_assets();
+
+    $heading = isset($settings['services_heading']) ? $settings['services_heading'] : 'Our Services';
+
+    static $instance = 0;
+    $instance++;
+    $section_id = 'ogft-services-' . $instance;
+
+    ob_start();
+    $template = OGFT_PATH . 'features/services/template.php';
+    $ogft_services_items = $items;
+    $ogft_services_heading = $heading;
+    $ogft_services_id = $section_id;
+    include $template;
+    return ob_get_clean();
+}
+add_shortcode('open_gate_services', 'ogft_shortcode_services');
+
+function ogft_render_work_modal_root()
+{
+    echo '<div id="ogft-work-modal-root"></div>';
+}
+
+function ogft_maybe_bootstrap_featured_work_modal()
+{
+    $settings = ogft_get_settings();
+    $page_id = isset($settings['featured_work_detail_page_id']) ? absint($settings['featured_work_detail_page_id']) : 0;
+    $work_id = isset($_GET['ogft_work']) ? absint($_GET['ogft_work']) : 0;
+
+    if (!$page_id || !$work_id) {
+        return;
+    }
+
+    if (!is_page($page_id)) {
+        return;
+    }
+
+    $item = ogft_get_work_item_by_id($work_id);
+    if (!$item) {
+        return;
+    }
+
+    ogft_enqueue_featured_work_modal_assets();
+
+    wp_localize_script('ogft-featured-work-modal', 'ogftWorkModalData', [
+        'item' => $item,
+        'strings' => [
+            'brand' => get_bloginfo('name'),
+            'ctaLabel' => __('Request a quote', 'open-gate-film-templates'),
+        ],
+        'ctaUrl' => '',
+    ]);
+
+    add_action('wp_footer', 'ogft_render_work_modal_root');
+}
+add_action('wp', 'ogft_maybe_bootstrap_featured_work_modal');
+
+function ogft_enqueue_featured_work_assets()
+{
+    wp_enqueue_style(
+        'ogft-featured-work',
+        OGFT_URL . 'features/featured-work/style.css',
+        [],
+        OGFT_VERSION
+    );
+    wp_enqueue_script(
+        'ogft-featured-work',
+        OGFT_URL . 'features/featured-work/script.js',
+        [],
+        OGFT_VERSION,
+        true
+    );
+}
+
+function ogft_admin_assets($hook)
+{
+    if ($hook !== 'toplevel_page_open-gate-film-templates') {
+        return;
+    }
+
+    wp_enqueue_media();
+    wp_enqueue_style(
+        'ogft-admin',
+        OGFT_URL . 'features/featured-slider/admin.css',
+        [],
+        OGFT_VERSION
+    );
+    wp_enqueue_script(
+        'ogft-slider-admin',
+        OGFT_URL . 'features/featured-slider/admin.js',
+        ['jquery', 'media-editor'],
+        OGFT_VERSION,
+        true
+    );
+}
+add_action('admin_enqueue_scripts', 'ogft_admin_assets');
 
 function ogft_shortcode_stats()
 {

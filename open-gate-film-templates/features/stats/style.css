@@ -2,7 +2,6 @@
     padding: 72px 0;
     overflow: hidden;
     width: 100%;
-    max-width: 1440px;
     margin-inline: auto;
 }
 
@@ -39,7 +38,6 @@
     background-image: var(--bg);
     background-size: cover;
     background-position: center;
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
     transform: translateZ(0);
 }
 

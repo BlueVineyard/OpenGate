@@ -7,7 +7,7 @@ if (empty($items) || !is_array($items)) {
     return;
 }
 ?>
-<section class="stats-marquee ogft-stats-marquee" aria-label="Stats" id="<?php echo esc_attr($section_id); ?>">
+<div class="stats-marquee ogft-stats-marquee" aria-label="Stats" id="<?php echo esc_attr($div_id); ?>">
     <div class="stats-marquee__tilt">
         <div class="stats-marquee__viewport">
             <div class="stats-marquee__track">
