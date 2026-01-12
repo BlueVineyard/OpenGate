@@ -51,12 +51,10 @@ function ogft_get_settings()
         'enable_stats' => '1',
         'enable_featured_slider' => '0',
         'enable_logo_slider' => '0',
-        'enable_services' => '0',
         'featured_work_detail_page_id' => '',
         'stats_items' => wp_json_encode(ogft_default_stats_items(), JSON_PRETTY_PRINT),
         'featured_slider_image_ids' => '',
         'logo_slider_image_ids' => '',
-        'services_heading' => 'Our Services',
     ];
 
     $settings = get_option('ogft_settings', []);
@@ -382,7 +380,6 @@ function ogft_sanitize_settings($input)
     $sanitized['enable_stats'] = empty($input['enable_stats']) ? '0' : '1';
     $sanitized['enable_featured_slider'] = empty($input['enable_featured_slider']) ? '0' : '1';
     $sanitized['enable_logo_slider'] = empty($input['enable_logo_slider']) ? '0' : '1';
-    $sanitized['enable_services'] = empty($input['enable_services']) ? '0' : '1';
     $sanitized['featured_work_detail_page_id'] = isset($input['featured_work_detail_page_id'])
         ? (string)absint($input['featured_work_detail_page_id'])
         : '';
@@ -392,7 +389,6 @@ function ogft_sanitize_settings($input)
     $sanitized['logo_slider_image_ids'] = isset($input['logo_slider_image_ids'])
         ? implode(',', array_filter(array_map('absint', explode(',', $input['logo_slider_image_ids']))))
         : '';
-    $sanitized['services_heading'] = isset($input['services_heading']) ? sanitize_text_field($input['services_heading']) : 'Our Services';
 
     $sanitized['stats_items'] = isset($input['stats_items'])
         ? sanitize_textarea_field($input['stats_items'])
@@ -472,17 +468,6 @@ function ogft_render_settings_page()
                 <button type="button" class="button ogft-media-picker-btn">Choose Logos</button>
                 <div class="ogft-media-picker__preview"></div>
             </div>
-
-            <hr />
-
-            <h2>Services</h2>
-            <p><strong>Shortcode:</strong> <code>[open_gate_services]</code>. Pulls published <code>service</code> posts and animates rows on scroll.</p>
-            <label>
-                <input type="checkbox" name="ogft_settings[enable_services]" value="1" <?php checked($settings['enable_services'], '1'); ?> />
-                Enable Services Section
-            </label>
-            <p>Heading text:</p>
-            <input type="text" name="ogft_settings[services_heading]" class="regular-text" value="<?php echo esc_attr($settings['services_heading']); ?>" />
 
             <?php submit_button('Save Settings'); ?>
         </form>
@@ -673,110 +658,6 @@ function ogft_shortcode_logo_slider()
     return ob_get_clean();
 }
 add_shortcode('open_gate_logo_slider', 'ogft_shortcode_logo_slider');
-
-function ogft_get_services_items()
-{
-    $query = new WP_Query([
-        'post_type' => 'service',
-        'post_status' => 'publish',
-        'posts_per_page' => -1,
-        'orderby' => 'menu_order title',
-        'order' => 'ASC',
-        'no_found_rows' => true,
-    ]);
-
-    if (!$query->have_posts()) {
-        return [];
-    }
-
-    $items = [];
-    foreach ($query->posts as $post) {
-        $title = get_the_title($post);
-        $excerpt = get_the_excerpt($post);
-        if (!$excerpt) {
-            $excerpt = wp_trim_words(wp_strip_all_tags(get_post_field('post_content', $post->ID)), 40);
-        }
-
-        $service_url = get_post_meta($post->ID, 'services_url', true);
-        if (!$service_url && function_exists('get_field')) {
-            $service_url = get_field('services_url', $post->ID);
-        }
-        $service_url = $service_url ? esc_url($service_url) : get_permalink($post);
-
-        $items[] = [
-            'title' => $title,
-            'excerpt' => $excerpt,
-            'url' => $service_url,
-        ];
-    }
-
-    wp_reset_postdata();
-
-    return $items;
-}
-
-function ogft_enqueue_services_assets()
-{
-    wp_enqueue_style(
-        'ogft-services',
-        OGFT_URL . 'features/services/style.css',
-        [],
-        OGFT_VERSION
-    );
-
-    wp_enqueue_script(
-        'gsap',
-        'https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js',
-        [],
-        '3.12.5',
-        true
-    );
-    wp_enqueue_script(
-        'gsap-scrolltrigger',
-        'https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js',
-        ['gsap'],
-        '3.12.5',
-        true
-    );
-
-    wp_enqueue_script(
-        'ogft-services',
-        OGFT_URL . 'features/services/script.js',
-        ['gsap', 'gsap-scrolltrigger'],
-        OGFT_VERSION,
-        true
-    );
-}
-
-function ogft_shortcode_services()
-{
-    $settings = ogft_get_settings();
-    if (empty($settings['enable_services'])) {
-        return '';
-    }
-
-    $items = ogft_get_services_items();
-    if (!$items) {
-        return '';
-    }
-
-    ogft_enqueue_services_assets();
-
-    $heading = isset($settings['services_heading']) ? $settings['services_heading'] : 'Our Services';
-
-    static $instance = 0;
-    $instance++;
-    $section_id = 'ogft-services-' . $instance;
-
-    ob_start();
-    $template = OGFT_PATH . 'features/services/template.php';
-    $ogft_services_items = $items;
-    $ogft_services_heading = $heading;
-    $ogft_services_id = $section_id;
-    include $template;
-    return ob_get_clean();
-}
-add_shortcode('open_gate_services', 'ogft_shortcode_services');
 
 function ogft_render_work_modal_root()
 {

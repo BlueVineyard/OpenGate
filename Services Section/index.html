@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Services</title>
+
+    <style>
+        h1 {
+            background: white;
+            text-align: center;
+            z-index: 10;
+            position: relative;
+            padding: 0;
+            line-height: 1;
+            font-size: 3rem;
+        }
+
+        .sticky-heading {
+            position: sticky;
+            top: 35px;
+        }
+
+        .cards {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 60vh;
+        }
+
+        .custom-card {
+            position: absolute;
+            width: 90%;
+            height: 60vh;
+            background: linear-gradient(-40deg, #d754ad 0%, #f96785 67%, #fe7333 100%);
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 50px;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.2);
+            /*   opacity: 0; */
+            /*   transform: translateY(75%); */
+            transform-origin: center top;
+            transition: transform 0.4s ease, opacity 0.4s ease;
+        }
+
+        /* Dynamic stacking */
+        .cards .custom-card:nth-child(1) {
+            top: -30px;
+            z-index: 4;
+        }
+
+        .cards .custom-card:nth-child(2) {
+            top: 0px;
+            z-index: 3;
+        }
+
+        .cards .custom-card:nth-child(3) {
+            top: 30px;
+            z-index: 2;
+        }
+
+        .cards .custom-card:nth-child(4) {
+            top: 60px;
+            z-index: 1;
+        }
+
+        .opacity {
+            -moz-transition: 0.4s ease;
+            -ms-transition: 0.4s ease;
+            -o-transition: 0.4s ease;
+            transition: 0.4s ease;
+            -webkit-transition: 0.4s ease;
+            opacity: 0.6;
+        }
+
+        .scale {
+            moz-transition: 0.4s ease;
+            -ms-transition: 0.4s ease;
+            -o-transition: 0.4s ease;
+            transition: 0.4s ease;
+            -webkit-transition: 0.4s ease;
+            width: 95%;
+        }
+    </style>
+</head>
+
+<body>
+    <section style="min-height: 100vh;"></section>
+    <section class="container">
+
+        <div class="sticky-heading">
+            <h1>Fixed Title (Scroll page)</h1>
+        </div>
+
+        <div class="cards">
+            <div class="custom-card card1" id="1" style=" z-index: 2;">
+                <h2>Slide 1</h2>
+            </div>
+            <div class="custom-card card2" id="2" style=" z-index: 3;">
+                <h2>Slide 2</h2>
+            </div>
+            <div class="custom-card card3" id="3" style="z-index: 4;">
+                <h2>Slide 3</h2>
+            </div>
+
+            <div class="custom-card card4" id="4" style="z-index: 5;">
+                <h2>Slide 4</h2>
+            </div>
+        </div>
+    </section>
+    <section style="min-height: 100vh;"></section>
+
+
+    <script src="https://code.jquery.com/jquery-3.6.3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.10.4/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollToPlugin.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
+    <script>
+        gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
+
+        let tl = gsap.timeline({
+            scrollTrigger: {
+                trigger: ".cards",
+                pin: true,
+                pinSpacing: true,
+                // markers: true,
+                start: "top-=150px top", // when the top of the trigger hits the top of the viewport
+                end: "+=2000", // end after scrolling 1000px beyond the start
+                scrub: 1, // smooth scrubbing, takes 1 second to "catch up" to the scrollbar
+            }
+        });
+
+        // Animation for card 1
+        tl.addLabel("card1");
+        tl.to('.card1', {
+            yPercent: 0,
+            opacity: 1
+        })
+
+        // Animation for card 2
+        tl.from('.card2', {
+            yPercent: 75,
+            opacity: 0,
+        })
+        tl.addLabel("card2");
+        tl.add(() => setActiveNav(tl.scrollTrigger.direction > 0 ? 1 : 0), "-=0.15");
+        tl.to('.card1', {
+            scale: 0.925,
+            yPercent: -0.75,
+            opacity: 1
+        }, "-=0.3")
+        tl.to('.card2', {
+            yPercent: 0,
+            opacity: 1
+        })
+
+        // Animation for card 3
+        tl.from('.card3', {
+            yPercent: 75,
+            opacity: 0,
+        })
+        tl.addLabel("card3");
+        tl.add(() => setActiveNav(tl.scrollTrigger.direction > 0 ? 2 : 1), "-=0.15");
+        tl.to('.card2', {
+            scale: 0.95,
+            yPercent: -0.5,
+            opacity: 1
+        }, "-=0.3")
+        tl.to('.card3', {
+            yPercent: 0,
+            opacity: 1
+        })
+
+        // Animation for card 4
+        tl.from('.card4', {
+            yPercent: 75,
+            opacity: 0,
+        })
+        tl.addLabel("card4");
+        tl.add(() => setActiveNav(tl.scrollTrigger.direction > 0 ? 3 : 2), "-=0.15");
+        tl.to('.card3', {
+            scale: 0.98,
+            yPercent: -0.4,
+            opacity: 1
+        }, "-=0.3")
+        tl.to('.card4', {
+            yPercent: 0,
+            opacity: 1
+        })
+
+        // Additional animations for scaling down previous cards
+        tl.to('.card1', {
+            scale: 0.925,
+            yPercent: -1.5,
+            opacity: 0.9
+        }, "-=0.3")
+
+        tl.to('.card2', {
+            scale: 0.95,
+            yPercent: -1.125,
+            opacity: 0.9
+        }, "-=0.3")
+
+        tl.to('.card3', {
+            scale: 0.98,
+            yPercent: -0.85,
+            opacity: 0.9
+        }, "-=0.3")
+    </script>
+</body>
+
+</html>
